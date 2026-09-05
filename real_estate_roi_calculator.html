@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EstateQuest | Real Estate ROI Calculator</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Google Fonts: Inter & Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        heading: ['Outfit', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            200: '#bae6fd',
+                            300: '#7dd3fc',
+                            400: '#38bdf8',
+                            500: '#0ea5e9', // Primary Blue
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            800: '#075985',
+                            900: '#0c4a6e',
+                        },
+                        dark: {
+                            900: '#0f172a', // Deep background
+                            800: '#1e293b', // Card background
+                            700: '#334155', // Borders
+                        }
+                    },
+                    boxShadow: {
+                        'neon': '0 0 15px rgba(14, 165, 233, 0.5)',
+                        'neon-hover': '0 0 25px rgba(14, 165, 233, 0.8)',
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        /* Custom styles for elements not easily handled by Tailwind utilities */
+        body {
+            background-color: #0f172a; /* dark-900 */
+            color: #f8fafc; /* slate-50 */
+        }
+
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .gradient-text {
+            background: linear-gradient(135deg, #38bdf8, #0284c7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #0ea5e9; 
+        }
+
+        /* Range Slider Styling */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 20px;
+            width: 20px;
+            border-radius: 50%;
+            background: #0ea5e9;
+            cursor: pointer;
+            margin-top: -8px;
+            box-shadow: 0 0 10px rgba(14,165,233,0.5);
+            transition: all 0.2s ease-in-out;
+        }
+        input[type=range]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 0 15px rgba(14,165,233,0.8);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #334155;
+            border-radius: 2px;
+        }
+        input[type=range]:focus {
+            outline: none;
+        }
+        
+        .animated-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            overflow: hidden;
+            opacity: 0.4;
+        }
+        
+        .blob {
+            position: absolute;
+            filter: blur(80px);
+            z-index: -1;
+            animation: moveBlob 20s infinite alternate;
+        }
+
+        .blob-1 {
+            top: -10%;
+            left: -10%;
+            width: 500px;
+            height: 500px;
+            background: rgba(14, 165, 233, 0.15); /* Brand Blue */
+            border-radius: 50%;
+        }
+
+        .blob-2 {
+            bottom: -20%;
+            right: -10%;
+            width: 600px;
+            height: 600px;
+            background: rgba(2, 132, 199, 0.1); /* Darker Blue */
+            border-radius: 50%;
+            animation-delay: -10s;
+        }
+
+        @keyframes moveBlob {
+            0% { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(50px, 50px) scale(1.1); }
+        }
+
+        /* Number transition class */
+        .number-transition {
+            transition: all 0.3s ease-out;
+        }
+    </style>
+</head>
+<body class="antialiased min-h-screen flex flex-col relative">
+
+    <div class="animated-bg">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+    </div>
+
+    <nav class="sticky top-0 z-50 glass-panel border-b-0 border-b-white/5 py-4 px-6 md:px-12 flex justify-between items-center transition-all duration-300" id="navbar">
+        <div class="flex items-center gap-3">
+            <div class="bg-brand-500 p-2 rounded-lg shadow-neon">
+                <i data-lucide="building-2" class="text-white w-6 h-6"></i>
+            </div>
+            <span class="font-heading font-bold text-2xl tracking-tight">Estate<span class="text-brand-400">Quest</span></span>
+        </div>
+        
+        <div class="hidden md:flex gap-8 text-sm font-medium text-slate-300">
+            <a href="#" class="hover:text-brand-400 transition-colors">Calculator</a>
+            <a href="#how-it-works" class="hover:text-brand-400 transition-colors">How it works</a>
+            <a href="#market-trends" class="hover:text-brand-400 transition-colors">Market Trends</a>
+        </div>
+
+        <button class="md:hidden text-slate-300 hover:text-white">
+            <i data-lucide="menu"></i>
+        </button>
+    </nav>
+
+    <main class="flex-grow container mx-auto px-4 py-8 md:py-16 max-w-7xl">
+        
+        <!-- Header Section -->
+        <div class="text-center mb-12 md:mb-20">
+            <h1 class="font-heading text-4xl md:text-6xl font-extrabold mb-4 leading-tight">
+                Project Your <br class="md:hidden"/>
+                <span class="gradient-text">Real Estate Future</span>
+            </h1>
+            <p class="text-slate-400 max-w-2xl mx-auto text-lg md:text-xl">
+                Calculate potential profit or loss on your property investment over a 10-year horizon using our advanced projection engine.
+            </p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            
+            <!-- Left Column: Input Form -->
+            <div class="lg:col-span-5 glass-panel rounded-2xl p-6 md:p-8 relative overflow-hidden group">
+                <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-brand-600 to-brand-400"></div>
+                
+                <div class="flex items-center gap-3 mb-8">
+                    <i data-lucide="calculator" class="text-brand-400"></i>
+                    <h2 class="font-heading text-2xl font-semibold">Investment Details</h2>
+                </div>
+
+                <form id="roi-form" class="space-y-6">
+                    
+                    <!-- Property Name -->
+                    <div>
+                        <label for="propertyName" class="block text-sm font-medium text-slate-300 mb-2">Property Name / Location (Optional)</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i data-lucide="map-pin" class="text-slate-500 w-5 h-5"></i>
+                            </div>
+                            <input type="text" id="propertyName" placeholder="e.g. Downtown Apartment" 
+                                class="w-full bg-dark-900/50 border border-dark-700 rounded-xl py-3 pl-10 pr-4 text-white focus:ring-2 focus:ring-brand-500 focus:border-transparent outline-none transition-all placeholder-slate-600">
+                        </div>
+                    </div>
+
+                    <!-- Initial Purchase Price -->
+                    <div>
+                        <label for="purchasePrice" class="block text-sm font-medium text-slate-300 mb-2">Initial Purchase Price ($)</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <span class="text-slate-500 font-semibold">$</span>
+                            </div>
+                            <input type="number" id="purchasePrice" value="250000" min="1000" step="1000" required
+                                class="w-full bg-dark-900/50 border border-dark-700 rounded-xl py-3 pl-10 pr-4 text-white font-mono text-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent outline-none transition-all">
+                        </div>
+                        <div class="mt-2 flex justify-between text-xs text-slate-500">
+                            <span>$10k</span>
+                            <span>$1M+</span>
+                        </div>
+                    </div>
+
+                    <!-- Annual Appreciation/Depreciation Rate -->
+                    <div class="pt-2">
+                        <div class="flex justify-between items-end mb-2">
+                            <label for="appreciationRate" class="block text-sm font-medium text-slate-300">
+                                Estimated Annual Growth Rate
+                            </label>
+                            <span id="rateDisplay" class="text-brand-400 font-mono font-bold text-lg bg-brand-500/10 px-2 py-1 rounded-md">4.0%</span>
+                        </div>
+                        
+                        <input type="range" id="appreciationRate" min="-10" max="15" step="0.5" value="4.0" class="w-full mt-2">
+                        
+                        <div class="flex justify-between mt-2 text-xs text-slate-500">
+                            <span>-10% (Loss)</span>
+                            <span>0%</span>
+                            <span>+15% (Boom)</span>
+                        </div>
+                        <p class="text-xs text-slate-400 mt-2 bg-dark-800/50 p-2 rounded-lg border border-dark-700">
+                            <i data-lucide="info" class="inline w-3 h-3 mr-1 text-brand-400"></i>
+                            Historical average real estate appreciation is ~3-5% annually.
+                        </p>
+                    </div>
+
+                    <!-- Extra Costs (Maintenance, Taxes) -->
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-2">Include Holding Costs? (Annual %)</label>
+                        <div class="flex gap-4">
+                            <label class="flex-1 cursor-pointer">
+                                <input type="radio" name="holdingCosts" value="0" class="peer sr-only" checked>
+                                <div class="text-center py-2 px-4 rounded-xl border border-dark-700 peer-checked:border-brand-500 peer-checked:bg-brand-500/10 peer-checked:text-brand-400 transition-all">
+                                    No Costs
+                                </div>
+                            </label>
+                            <label class="flex-1 cursor-pointer">
+                                <input type="radio" name="holdingCosts" value="1.5" class="peer sr-only">
+                                <div class="text-center py-2 px-4 rounded-xl border border-dark-700 peer-checked:border-brand-500 peer-checked:bg-brand-500/10 peer-checked:text-brand-400 transition-all">
+                                    Standard (~1.5%)
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Action Button -->
+                    <button type="button" id="calculateBtn" class="w-full bg-gradient-to-r from-brand-600 to-brand-400 hover:from-brand-500 hover:to-brand-300 text-white font-semibold py-4 rounded-xl shadow-neon hover:shadow-neon-hover transition-all duration-300 flex items-center justify-center gap-2 mt-4 transform hover:-translate-y-1">
+                        <i data-lucide="trending-up"></i>
+                        Calculate 10-Year Projection
+                    </button>
+                </form>
+            </div>
+
+            <div class="lg:col-span-7 flex flex-col gap-6">
+                
+                <!-- Summary Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Current Value Card -->
+                    <div class="glass-panel rounded-2xl p-6 border border-dark-700 relative overflow-hidden">
+                        <div class="absolute top-0 right-0 p-4 opacity-10">
+                            <i data-lucide="home" class="w-24 h-24"></i>
+                        </div>
+                        <p class="text-sm text-slate-400 font-medium mb-1">Initial Investment</p>
+                        <h3 class="font-heading text-3xl font-bold text-white number-transition" id="resInitial">$250,000</h3>
+                        <p class="text-xs text-slate-500 mt-2 flex items-center gap-1">
+                            <i data-lucide="calendar" class="w-3 h-3"></i> Year 0
+                        </p>
+                    </div>
+
+                    <!-- Projected Value Card -->
+                    <div class="glass-panel rounded-2xl p-6 border border-brand-500/30 relative overflow-hidden shadow-[0_0_15px_rgba(14,165,233,0.1)]">
+                        <div class="absolute top-0 right-0 p-4 opacity-10">
+                            <i data-lucide="fast-forward" class="w-24 h-24 text-brand-400"></i>
+                        </div>
+                        <p class="text-sm text-slate-400 font-medium mb-1">Projected Value (Year 10)</p>
+                        <h3 class="font-heading text-3xl font-bold text-brand-400 number-transition" id="resFinal">$370,061</h3>
+                        <div class="mt-2 flex items-center gap-2" id="profitBadgeContainer">
+                            <span class="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium bg-emerald-500/20 text-emerald-400" id="profitBadge">
+                                <i data-lucide="arrow-up-right" class="w-3 h-3"></i>
+                                <span id="resProfitPct">+48.0%</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Big Result Card (Profit/Loss) -->
+                <div class="glass-panel rounded-2xl p-6 md:p-8 border border-dark-700 flex flex-col md:flex-row items-center justify-between gap-6" id="statusCard">
+                    <div>
+                        <h4 class="text-lg font-medium text-slate-300 mb-2">Total Net Return</h4>
+                        <div class="flex items-baseline gap-3">
+                            <span class="font-heading text-4xl md:text-5xl font-extrabold text-emerald-400 number-transition" id="resProfitAmount">+$120,061</span>
+                        </div>
+                        <p class="text-sm text-slate-500 mt-2" id="resHoldingCostsText">Excluding holding costs.</p>
+                    </div>
+                    
+                    <div class="w-full md:w-auto flex flex-col gap-3">
+                        <div class="bg-dark-900/80 rounded-xl p-4 border border-dark-700 min-w-[200px]">
+                            <p class="text-xs text-slate-400 mb-1">Status</p>
+                            <p class="font-semibold text-emerald-400 flex items-center gap-2" id="resStatus">
+                                <i data-lucide="check-circle-2" class="w-5 h-5"></i> Highly Profitable
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chart Container -->
+                <div class="glass-panel rounded-2xl p-6 border border-dark-700 flex-grow flex flex-col min-h-[350px]">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="font-heading text-xl font-semibold flex items-center gap-2">
+                            <i data-lucide="bar-chart-3" class="text-brand-400"></i>
+                            10-Year Growth Trajectory
+                        </h3>
+                        <div class="flex gap-2">
+                            <span class="flex items-center gap-1 text-xs text-slate-400"><div class="w-3 h-3 rounded-full bg-brand-500"></div> Property Value</span>
+                            <span class="flex items-center gap-1 text-xs text-slate-400"><div class="w-3 h-3 rounded-full bg-dark-700"></div> Initial Investment</span>
+                        </div>
+                    </div>
+                    
+                    <div class="relative flex-grow w-full h-full">
+                        <canvas id="growthChart"></canvas>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+        
+        <div class="mt-16 grid grid-cols-1 md:grid-cols-3 gap-6" id="how-it-works">
+            <div class="bg-dark-800/50 p-6 rounded-2xl border border-dark-700/50">
+                <div class="bg-brand-500/10 w-12 h-12 rounded-xl flex items-center justify-center mb-4">
+                    <i data-lucide="lightbulb" class="text-brand-400 w-6 h-6"></i>
+                </div>
+                <h4 class="font-heading font-semibold text-lg mb-2">Compound Interest</h4>
+                <p class="text-sm text-slate-400 leading-relaxed">Real estate appreciation compounds annually. A consistent 4% growth rate means exponential gains over a decade.</p>
+            </div>
+            <div class="bg-dark-800/50 p-6 rounded-2xl border border-dark-700/50">
+                <div class="bg-brand-500/10 w-12 h-12 rounded-xl flex items-center justify-center mb-4">
+                    <i data-lucide="wallet" class="text-brand-400 w-6 h-6"></i>
+                </div>
+                <h4 class="font-heading font-semibold text-lg mb-2">Holding Costs</h4>
+                <p class="text-sm text-slate-400 leading-relaxed">Taxes, maintenance, and insurance eat into profits. Our calculator allows you to estimate a flat annual percentage deduction.</p>
+            </div>
+            <div class="bg-dark-800/50 p-6 rounded-2xl border border-dark-700/50">
+                <div class="bg-brand-500/10 w-12 h-12 rounded-xl flex items-center justify-center mb-4">
+                    <i data-lucide="line-chart" class="text-brand-400 w-6 h-6"></i>
+                </div>
+                <h4 class="font-heading font-semibold text-lg mb-2">Market Volatility</h4>
+                <p class="text-sm text-slate-400 leading-relaxed">Projections are estimates based on historical data. Local markets can experience fluctuations not captured by steady rates.</p>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-dark-700/50 mt-12 py-8 bg-dark-900/80 backdrop-blur-md">
+        <div class="container mx-auto px-4 text-center">
+            <div class="flex items-center justify-center gap-2 mb-4">
+                <i data-lucide="building-2" class="text-brand-500 w-5 h-5"></i>
+                <span class="font-heading font-bold text-xl">Estate<span class="text-brand-400">Quest</span></span>
+            </div>
+            <p class="text-slate-500 text-sm mb-4">Empowering smarter real estate decisions through data visualization.</p>
+            <div class="flex justify-center gap-4 text-slate-400">
+                <a href="#" class="hover:text-brand-400 transition-colors"><i data-lucide="twitter" class="w-5 h-5"></i></a>
+                <a href="#" class="hover:text-brand-400 transition-colors"><i data-lucide="github" class="w-5 h-5"></i></a>
+                <a href="#" class="hover:text-brand-400 transition-colors"><i data-lucide="linkedin" class="w-5 h-5"></i></a>
+            </div>
+            <p class="text-slate-600 text-xs mt-6">&copy; 2026 EstateQuest. For illustrative purposes only. Not financial advice.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Initialize Lucide Icons
+        lucide.createIcons();
+
+        // DOM Elements
+        const purchasePriceInput = document.getElementById('purchasePrice');
+        const appreciationRateInput = document.getElementById('appreciationRate');
+        const rateDisplay = document.getElementById('rateDisplay');
+        const calculateBtn = document.getElementById('calculateBtn');
+        const holdingCostsRadios = document.getElementsByName('holdingCosts');
+
+        // Result Elements
+        const resInitial = document.getElementById('resInitial');
+        const resFinal = document.getElementById('resFinal');
+        const resProfitAmount = document.getElementById('resProfitAmount');
+        const resProfitPct = document.getElementById('resProfitPct');
+        const profitBadge = document.getElementById('profitBadge');
+        const statusCard = document.getElementById('statusCard');
+        const resStatus = document.getElementById('resStatus');
+        const resHoldingCostsText = document.getElementById('resHoldingCostsText');
+
+        let myChart = null;
+
+        // Formatter for Currency
+        const currencyFormatter = new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'USD',
+            maximumFractionDigits: 0
+        });
+
+        // Update Slider Display Real-time
+        appreciationRateInput.addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value);
+            rateDisplay.textContent = (val > 0 ? '+' : '') + val.toFixed(1) + '%';
+            
+            // Visual feedback on slider track based on value
+            if(val < 0) {
+                rateDisplay.className = "text-red-400 font-mono font-bold text-lg bg-red-500/10 px-2 py-1 rounded-md";
+            } else if (val > 8) {
+                rateDisplay.className = "text-emerald-400 font-mono font-bold text-lg bg-emerald-500/10 px-2 py-1 rounded-md";
+            } else {
+                rateDisplay.className = "text-brand-400 font-mono font-bold text-lg bg-brand-500/10 px-2 py-1 rounded-md";
+            }
+        });
+
+        // Calculate Logic
+        function calculateROI() {
+            const initialPrice = parseFloat(purchasePriceInput.value);
+            if (isNaN(initialPrice) || initialPrice <= 0) {
+                // Simple validation feedback (no alert)
+                purchasePriceInput.classList.add('ring-2', 'ring-red-500');
+                setTimeout(() => purchasePriceInput.classList.remove('ring-2', 'ring-red-500'), 1000);
+                return;
+            }
+
+            const appreciationRate = parseFloat(appreciationRateInput.value) / 100;
+            
+            // Get selected holding cost rate
+            let holdingCostRate = 0;
+            for(let radio of holdingCostsRadios) {
+                if(radio.checked) {
+                    holdingCostRate = parseFloat(radio.value) / 100;
+                    break;
+                }
+            }
+            
+            const netRate = appreciationRate - holdingCostRate;
+            const years = 10;
+            
+            // Arrays for chart data
+            const labels = [];
+            const propertyValues = [];
+            const initialInvestmentData = [];
+
+            let currentValue = initialPrice;
+
+            for (let year = 0; year <= years; year++) {
+                labels.push(`Year ${year}`);
+                propertyValues.push(Math.round(currentValue));
+                initialInvestmentData.push(initialPrice); // Constant line for reference
+                
+                // Compound calculation for next year
+                currentValue = currentValue * (1 + netRate);
+            }
+
+            const finalValue = propertyValues[years];
+            const profitLoss = finalValue - initialPrice;
+            const percentageChange = (profitLoss / initialPrice) * 100;
+
+            updateUI(initialPrice, finalValue, profitLoss, percentageChange, holdingCostRate > 0);
+            updateChart(labels, propertyValues, initialInvestmentData, profitLoss >= 0);
+        }
+
+        function updateUI(initial, final, profit, pct, hasHoldingCosts) {
+            // Animate numbers slightly by removing and re-adding values rapidly (simple effect)
+            resInitial.style.opacity = '0.5';
+            resFinal.style.opacity = '0.5';
+            resProfitAmount.style.opacity = '0.5';
+            
+            setTimeout(() => {
+                resInitial.textContent = currencyFormatter.format(initial);
+                resFinal.textContent = currencyFormatter.format(final);
+                
+                const isProfit = profit >= 0;
+                const sign = isProfit ? '+' : '';
+                
+                resProfitAmount.textContent = `${sign}${currencyFormatter.format(profit)}`;
+                resProfitPct.textContent = `${sign}${pct.toFixed(1)}%`;
+
+                // Styling based on Profit or Loss
+                if (isProfit) {
+                    // Profit Styling
+                    resProfitAmount.className = "font-heading text-4xl md:text-5xl font-extrabold text-emerald-400 number-transition";
+                    resFinal.className = "font-heading text-3xl font-bold text-emerald-400 number-transition";
+                    profitBadge.className = "inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium bg-emerald-500/20 text-emerald-400";
+                    profitBadge.innerHTML = `<i data-lucide="arrow-up-right" class="w-3 h-3"></i> <span id="resProfitPct">${sign}${pct.toFixed(1)}%</span>`;
+                    
+                    let statusTxt = "Profitable";
+                    let icon = "check-circle-2";
+                    if(pct > 50) statusTxt = "Highly Profitable";
+                    if(pct > 100) statusTxt = "Exceptional Return";
+
+                    resStatus.className = "font-semibold text-emerald-400 flex items-center gap-2";
+                    resStatus.innerHTML = `<i data-lucide="${icon}" class="w-5 h-5"></i> ${statusTxt}`;
+                } else {
+                    // Loss Styling
+                    resProfitAmount.className = "font-heading text-4xl md:text-5xl font-extrabold text-red-400 number-transition";
+                    resFinal.className = "font-heading text-3xl font-bold text-red-400 number-transition";
+                    profitBadge.className = "inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium bg-red-500/20 text-red-400";
+                    profitBadge.innerHTML = `<i data-lucide="arrow-down-right" class="w-3 h-3"></i> <span id="resProfitPct">${pct.toFixed(1)}%</span>`;
+                    
+                    resStatus.className = "font-semibold text-red-400 flex items-center gap-2";
+                    resStatus.innerHTML = `<i data-lucide="alert-triangle" class="w-5 h-5"></i> Loss Projected`;
+                }
+
+                resHoldingCostsText.textContent = hasHoldingCosts ? "Net return after estimated holding costs." : "Excluding holding costs.";
+
+                // Re-init specific icons that were replaced via innerHTML
+                lucide.createIcons();
+
+                resInitial.style.opacity = '1';
+                resFinal.style.opacity = '1';
+                resProfitAmount.style.opacity = '1';
+            }, 150);
+        }
+
+        function updateChart(labels, dataValues, initialData, isProfit) {
+            const ctx = document.getElementById('growthChart').getContext('2d');
+            
+            // Set theme colors based on profit/loss
+            const mainColor = isProfit ? 'rgba(16, 185, 129, 1)' : 'rgba(239, 68, 68, 1)'; // emerald-500 or red-500
+            const bgColor = isProfit ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)';
+            const gradientColorStart = isProfit ? 'rgba(14, 165, 233, 0.8)' : 'rgba(239, 68, 68, 0.8)'; // Brand blue for profit line, red for loss
+
+            // Create gradient
+            const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+            gradient.addColorStop(0, isProfit ? 'rgba(14, 165, 233, 0.5)' : 'rgba(239, 68, 68, 0.5)'); // Brand blue or red
+            gradient.addColorStop(1, 'rgba(15, 23, 42, 0)'); // fade to background
+
+            if (myChart) {
+                myChart.destroy();
+            }
+
+            Chart.defaults.color = '#94a3b8'; // slate-400
+            Chart.defaults.font.family = "'Inter', sans-serif";
+
+            myChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Projected Value',
+                            data: dataValues,
+                            borderColor: gradientColorStart,
+                            backgroundColor: gradient,
+                            borderWidth: 3,
+                            pointBackgroundColor: '#0f172a',
+                            pointBorderColor: gradientColorStart,
+                            pointBorderWidth: 2,
+                            pointRadius: 4,
+                            pointHoverRadius: 6,
+                            fill: true,
+                            tension: 0.4 // Smooth curves
+                        },
+                        {
+                            label: 'Initial Investment',
+                            data: initialData,
+                            borderColor: 'rgba(51, 65, 85, 0.8)', // slate-700
+                            borderWidth: 2,
+                            borderDash: [5, 5],
+                            pointRadius: 0,
+                            fill: false,
+                            tension: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    plugins: {
+                        legend: {
+                            display: false // We use custom HTML legend
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(30, 41, 59, 0.9)', // dark-800
+                            titleColor: '#f8fafc',
+                            bodyColor: '#cbd5e1',
+                            borderColor: 'rgba(51, 65, 85, 1)',
+                            borderWidth: 1,
+                            padding: 12,
+                            displayColors: true,
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        label += new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(context.parsed.y);
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                color: 'rgba(51, 65, 85, 0.3)', // slate-700
+                                drawBorder: false
+                            },
+                            ticks: {
+                                maxTicksLimit: 6
+                            }
+                        },
+                        y: {
+                            grid: {
+                                color: 'rgba(51, 65, 85, 0.3)',
+                                drawBorder: false
+                            },
+                            ticks: {
+                                callback: function(value, index, values) {
+                                    if (value >= 1000000) {
+                                        return '$' + (value / 1000000).toFixed(1) + 'M';
+                                    } else if (value >= 1000) {
+                                        return '$' + (value / 1000).toFixed(0) + 'k';
+                                    }
+                                    return '$' + value;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        
+        // Handle Calculate Button Click
+        calculateBtn.addEventListener('click', calculateROI);
+
+        // Allow 'Enter' key in inputs to trigger calculation
+        document.getElementById('roi-form').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                calculateROI();
+            }
+        });
+
+        // Add scroll effect for navbar
+        window.addEventListener('scroll', () => {
+            const nav = document.getElementById('navbar');
+            if (window.scrollY > 20) {
+                nav.classList.add('shadow-lg', 'bg-dark-900/90');
+                nav.classList.remove('border-b-white/5');
+                nav.classList.add('border-b-brand-500/20');
+            } else {
+                nav.classList.remove('shadow-lg', 'bg-dark-900/90', 'border-b-brand-500/20');
+                nav.classList.add('border-b-white/5');
+            }
+        });
+
+        // Initialize with default values on load
+        window.onload = () => {
+            calculateROI();
+        };
+
+    </script>
+</body>
+</html>
